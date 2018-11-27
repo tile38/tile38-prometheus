@@ -17,7 +17,7 @@ const statsInterval = time.Second
 
 var (
 	// tile38Addr is the IP Address of the Tile38 database
-	tile38Addr = common.GetEnv("TILE38_ADDR", "209.97.150.193:9851")
+	tile38Addr = common.GetEnv("TILE38_ADDR", "")
 
 	// metrics is the slice of all data desired in the metrics output
 	metrics = []metric{
