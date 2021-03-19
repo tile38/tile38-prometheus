@@ -1,6 +1,6 @@
 # tile38-prometheus
 
-This repository provides a service that connects to a [Tile38](https://github.com/tidwall/tile38) instance 
+This repository provides a service that connects to a [Tile38](https://github.com/tidwall/tile38) instance
 and exposes an endpoint that delivers [Prometheus](https://prometheus.io) compatible metrics.
 
 ## Getting Started
@@ -38,6 +38,12 @@ To run the service and connect it to a Tile38 instance at localhost:9851:
 
 ```
 $ ./tile38-prometheus --tile38-addr localhost:9851
+```
+
+Optionally define a namespace for your metrics via:
+
+```
+$ ./tile38-prometheus --tile38-addr localhost:9851 --namespace myservice
 ```
 
 You can now see the metrics output at http://localhost:8080/metrics.
