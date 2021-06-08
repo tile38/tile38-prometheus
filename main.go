@@ -78,10 +78,13 @@ func main() {
 	var tile38Auth string
 	var tile38Addr string
 	var httpAddr string
+	var namespace string
 
 	flag.StringVar(&tile38Auth, "tile38-auth", "", "tile38 auth")
 	flag.StringVar(&tile38Addr, "tile38-addr", ":9851", "address to tile38 server")
 	flag.StringVar(&httpAddr, "http-addr", ":8080", "http server address")
+	flag.StringVar(&namespace, "namespace", "", "metrics namespace")
+
 	flag.Usage = func() {
 		fmt.Printf("Usage: ./tile38-prometheus [--tile38-addr addr] [options]\n")
 		fmt.Printf("\n")
@@ -89,6 +92,7 @@ func main() {
 		fmt.Printf("    --tile38-auth auth  : Tile38 AUTH password (default \"\")\n")
 		fmt.Printf("    --tile38-addr addr  : Address to Tile38 instance (default \":9851\")\n")
 		fmt.Printf("    --http-addr addr    : HTTP server listening address (default \":8080\")\n")
+		fmt.Printf("    --namespace namespace    : optional metrics namespace (default \"\")\n")
 		fmt.Printf("\n")
 		fmt.Printf("Environment variables:\n")
 		fmt.Printf("    TILE38_AUTH=<auth>\n")
@@ -129,7 +133,10 @@ func main() {
 
 	// create an http HandleFunc that retrieves statistics from Tile38
 	// and produces a valid prometheus metrics output.
-	http.HandleFunc("/metrics", handle)
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		handle(w, r, namespace)
+	})
+
 	go func() {
 		time.Sleep(time.Second)
 		log.Printf("Server started at %v", httpAddr)
@@ -138,7 +145,7 @@ func main() {
 	log.Printf("%s", http.ListenAndServe(httpAddr, nil))
 }
 
-func handle(w http.ResponseWriter, rd *http.Request) {
+func handle(w http.ResponseWriter, rd *http.Request, n string) {
 	conn := pool.Get()
 	defer conn.Close()
 
@@ -153,7 +160,7 @@ func handle(w http.ResponseWriter, rd *http.Request) {
 	// Produce a fully populated prometheus metrics output
 	var promOutput string
 	for _, metric := range metrics {
-		promOutput += metric.promString(get(m, metric.Key))
+		promOutput += metric.promString(get(m, metric.Key), n)
 	}
 
 	// Return a fully populated prometheus document
@@ -176,7 +183,12 @@ type metric struct{ Type, Key, Desc string }
 
 // promString returns the prometheus string representation of the metric given
 // a float64 value
-func (m metric) promString(val float64) string {
+func (m metric) promString(val float64, n string) string {
+	if len(n) > 0 {
+		return fmt.Sprintf("# HELP %s_%s %s\n", n, m.Key, m.Desc) +
+			fmt.Sprintf("# TYPE %s_%s %s\n", n, m.Key, m.Type) +
+			fmt.Sprintf("%s_%s %s\n", n, m.Key, strconv.FormatFloat(val, 'f', -1, 64))
+	}
 	return fmt.Sprintf("# HELP %s %s\n", m.Key, m.Desc) +
 		fmt.Sprintf("# TYPE %s %s\n", m.Key, m.Type) +
 		fmt.Sprintf("%s %s\n", m.Key, strconv.FormatFloat(val, 'f', -1, 64))
